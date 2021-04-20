@@ -26,6 +26,8 @@ from mojang import MojangAPI
 import datetime
 from mcrcon import MCRcon
 import numpy as np
+import os
+#from dotenv import load_dotenv
 
 
 
@@ -374,6 +376,7 @@ if __name__ == "__main__":
     @bot.event
     async def on_ready():
         print("starting bot and setting config")
+        #load_dotenv()
         global prefix
         global CHANNELID
         global rconIp
@@ -876,10 +879,11 @@ if __name__ == "__main__":
                             await username.send(embed = removeConfirm_embed)
 
 
-                        
 
 
 
 
-    #Run the bot (must replace bot with own version)
-    bot.run('')
+
+    #Run the bot (must replace bot with own version) done in enviroment varibles
+    token = str(os.environ.get('bot-token'))
+    bot.run(token)
