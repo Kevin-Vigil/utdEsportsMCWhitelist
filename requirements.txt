@@ -16,7 +16,6 @@ mojang==0.1.8
 multidict==4.7.6
 nest-asyncio==1.5.1
 numpy==1.18.2
-pandas==1.0.3
 protobuf==3.6.1
 pycares==3.1.1
 pycparser==2.20
