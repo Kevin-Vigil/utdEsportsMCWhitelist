@@ -34,7 +34,7 @@ import psycopg2
 
 
 pgURL = str(os.environ.get('DATABASE_URL'))
-print(pgURL)
+#print(pgURL)
 #pgUser = ""
 #pgdb = ""
 #pgPass = ""
