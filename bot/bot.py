@@ -31,11 +31,41 @@ import psycopg2
 #from tenv import load_dotenv
 
 
-pgdb = str(os.environ.get('postgresDB'))
-pgUser = str(os.environ.get('postgresUser'))
-pgPass = str(os.environ.get('postgresPass'))
-pgHost = str(os.environ.get('postgresHost'))
-pgPort = str(os.environ.get('postgresPort'))
+
+
+pgURL = str(os.environ.get('DATABASE_URL'))
+print(pgURL)
+#pgUser = ""
+#pgdb = ""
+#pgPass = ""
+#pgHost = ""
+#pgPort = ""
+
+m = re.search('@(.+?)/', pgURL)
+if m:
+    global pgHost
+    global pgPort
+    strr = str(m.group(1))
+    pgHost = str(strr.split(":")[0])
+    pgPort = str(strr.split(":")[1])
+m = re.search('//(.+?):', pgURL)
+if m:
+    global pgUser
+    pgUser = m.group(1)
+
+pgURL = pgURL.split("//")[1]
+m = re.search(':(.+?)@', pgURL)
+if m:
+    global pgPass
+    pgPass = str(m.group(1))
+
+
+m = re.search('\/(.+?)$', pgURL)
+if m:
+    global pgdb
+    pgdb = m.group(1)
+
+#print("Listing all information based on test case: \npgHost: " + str(pgHost) + "\npgPort: " + str(pgPort) + "\npgUser: " + str(pgUser) + "\npgPass: " + str(pgPass) + "\npgdb: " + str(pgdb))
 
 #Connects to the database using the sqlite3 library
 #conn = sqlite3.connect('..\\DB\\mcData.db')
