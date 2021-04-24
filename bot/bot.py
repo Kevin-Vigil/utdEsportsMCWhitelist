@@ -27,9 +27,7 @@ import datetime
 from mcrcon import MCRcon
 import numpy as np
 import os
-#from dotenv import load_dotenv
-
-
+#from tenv import load_dotenv
 
 #Connects to the database using the sqlite3 library
 conn = sqlite3.connect('..\\DB\\mcData.db')
