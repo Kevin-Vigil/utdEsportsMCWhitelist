@@ -27,11 +27,36 @@ import datetime
 from mcrcon import MCRcon
 import numpy as np
 import os
+import psycopg2
 #from tenv import load_dotenv
 
+
+pgdb = str(os.environ.get('postgresDB'))
+pgUser = str(os.environ.get('postgresUser'))
+pgPass = str(os.environ.get('postgresPass'))
+pgHost = str(os.environ.get('postgresHost'))
+pgPort = str(os.environ.get('postgresPort'))
+
 #Connects to the database using the sqlite3 library
-conn = sqlite3.connect('..\\DB\\mcData.db')
+#conn = sqlite3.connect('..\\DB\\mcData.db')
+conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
 cur = conn.cursor()
+cur.execute('''CREATE TABLE IF NOT EXISTS serverconfig
+                (server_id INT PRIMARY KEY NOT NULL UNIQUE,
+                 channel_id INT NOT NULL UNIQUE,
+                 preset TEXT,
+                 ip TEXT,
+                 port INT,
+                 password TEXT);''')
+cur.execute('''CREATE TABLE IF NOT EXISTS whitelist
+                (user_id INT PRIMARY KEY NOT NULL UNIQUE,
+                 first_name TEXT NOT NULL,
+                 last_name TEXT NOT NULL,
+                 uuid TEXT NOT NULL UNIQUE,
+                 username TEXT NOT NULL UNIQUE,
+                 email TEXT NOT NULL,
+                 isBanned INT NOT NULL);''')
+conn.commit()
 
 #regex expression for email validation
 regSearch = re.compile(r'^([A-Za-z0-9_]+([A-Za-z0-9!#$%&\'\*+/=?^_`{|}~-]\.?)*[A-Za-z0-9_]@(([A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]\.)+[A-Za-z]+|\[(\d{3}\.?){4}\]|(\d{3}\.?){4}))$')
