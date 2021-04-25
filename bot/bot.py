@@ -72,21 +72,22 @@ if m:
 conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
 cur = conn.cursor()
 cur.execute('''CREATE TABLE IF NOT EXISTS serverconfig
-                (server_id INT PRIMARY KEY NOT NULL UNIQUE,
-                 channel_id INT NOT NULL UNIQUE,
-                 preset TEXT,
-                 ip TEXT,
-                 port INT,
-                 password TEXT);''')
+                ("server_id" BIGINT PRIMARY KEY NOT NULL UNIQUE,
+                 "channel_id" BIGINT NOT NULL UNIQUE,
+                 "preset" VARCHAR(50),
+                 "ip" VARCHAR(50),
+                 "port" VARCHAR(7),
+                 "password" VARCHAR(50));''')
 cur.execute('''CREATE TABLE IF NOT EXISTS whitelist
-                (user_id INT PRIMARY KEY NOT NULL UNIQUE,
-                 first_name TEXT NOT NULL,
-                 last_name TEXT NOT NULL,
-                 uuid TEXT NOT NULL UNIQUE,
-                 username TEXT NOT NULL UNIQUE,
-                 email TEXT NOT NULL,
-                 isBanned INT NOT NULL);''')
+                ("user_id" BIGINT PRIMARY KEY NOT NULL UNIQUE,
+                 "first_name" VARCHAR(50) NOT NULL,
+                 "last_name" VARCHAR(50) NOT NULL,
+                 "uuid" VARCHAR(50) NOT NULL UNIQUE,
+                 "username" VARCHAR(50) NOT NULL UNIQUE,
+                 "email" VARCHAR(50) NOT NULL,
+                 "isBanned" INT NOT NULL);''')
 conn.commit()
+conn.close()
 
 #regex expression for email validation
 regSearch = re.compile(r'^([A-Za-z0-9_]+([A-Za-z0-9!#$%&\'\*+/=?^_`{|}~-]\.?)*[A-Za-z0-9_]@(([A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]\.)+[A-Za-z]+|\[(\d{3}\.?){4}\]|(\d{3}\.?){4}))$')
@@ -106,8 +107,11 @@ rconPass = ""
 #       true: user removed, false: user not found
 def remove_player(user_id):
     if poll(user_id) != False:
-        cur.execute("DELETE FROM whitelist WHERE user_id=?", (int(user_id),))
+        conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
+        cur = conn.cursor()
+        cur.execute('DELETE FROM whitelist WHERE user_id = ' + str(user_id) + ';')
         conn.commit()
+        conn.close()
 
         return True
     else:
@@ -118,9 +122,11 @@ def remove_player(user_id):
 #       true: player edited success, false: user not found
 def edit_username(user_id, uuid, username):
     if poll(user_id) != False:
-        cur.execute("UPDATE whitelist SET uuid=?, username=? WHERE user_id=?", (str(uuid), str(username), int(user_id)))
+        conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
+        cur = conn.cursor()
+        cur.execute('UPDATE whitelist SET uuid=N\'' + str(uuid) + '\', username=N\'' + str(username) + '\' WHERE user_id=' + str(user_id) + ';')
         conn.commit()
-
+        conn.close()
         return True
     else:
         return False
@@ -131,10 +137,12 @@ def edit_username(user_id, uuid, username):
 # Returns:
 #       true: returns the user information, false: player not found
 def poll(user_id):
-    cur.execute("SELECT * FROM whitelist WHERE user_id = ?", (int(user_id),))
+    conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM whitelist WHERE user_id = ' + str(user_id) + ';')
 
     a = cur.fetchone()
-
+    conn.close()
     if str(a) == 'None':
         return False
     else:
@@ -144,9 +152,12 @@ def poll(user_id):
 # Returns:
 #       true: returns the player if uuid exists, false: player not found
 def uuidPoll(uuid):
-    cur.execute("SELECT * FROM whitelist WHERE uuid=?", (str(uuid),))
+    conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM whitelist WHERE uuid = N\'' + str(uuid) + '\';')
 
     a = cur.fetchone()
+    conn.close()
 
     if str(a) == 'None':
         return False
@@ -435,17 +446,20 @@ if __name__ == "__main__":
         global rconIp
         global rconPort
         global rconPass
-
-        cur.execute("SELECT * FROM serverconfig")
+        conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
+        cur = conn.cursor()
+        cur.execute('SELECT * FROM serverconfig;')
         a = cur.fetchone()
-
+        conn.close()
+        if a != None:
+            print('showing server stuff: \nserver: '+ str(a[0]) + '\nchannel_id:'+str(a[1])+ '\nprefix:'+str(a[2])+'\nip:'+str(a[3])+'\nport:'+str(a[4])+ '\npass:'+str(a[5]))
         if a != None:
             bot.command_prefix = str(a[2])
             CHANNELID = int(a[1])
             rconIp = str(a[3])
             rconPort = int(a[4])
             rconPass = str(a[5])
-            mcr = MCRcon(str(rconIp), str(rconPass), port = int(rconPort))
+            mcr = MCRcon(str(rconIp), str(rconPass))
             mcr.connect()
             resp = mcr.command("/help")
             print(resp)
@@ -656,34 +670,39 @@ if __name__ == "__main__":
     @commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def setup(ctx):
-        cur.execute("SELECT * FROM serverconfig WHERE server_id = ?", (ctx.guild.id,))
+        conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
+        cur = conn.cursor()
+        cur.execute('SELECT * FROM serverconfig WHERE server_id = ' + str(ctx.guild.id) + ';')
         ser = cur.fetchone()
         if ser != None:
             #print(ser)
             ser = await menuSelect(ctx, ser)
             #print(ser)
-            cur.execute("UPDATE serverconfig SET channel_id = ?, preset = ?, ip = ?, port = ?, password = ? WHERE server_id = ?", (int(ser[1]), str(ser[2]), str(ser[3]), int(ser[4]), str(ser[5]), int(ser[0])))
+            cur.execute('UPDATE serverconfig SET channel_id = ' + str(ser[1]) + ', preset = N\'' + str(ser[2]) + '\', ip = N\'' + str(ser[3]) + '\', port = ' + str(ser[4]) + ', password = N\'' + str(ser[5]) + '\' WHERE server_id = ' + str(ser[0]) + ';')
             conn.commit()
         else:
             #print("going into initial setup")
             ser = await initialSetup(ctx)
             if ser != False:
                 #print(ser)
-                cur.execute("INSERT INTO serverconfig (server_id, channel_id, preset, ip, port, password) VALUES (?, ?, ?, ?, ?, ?)", (int(ser[0]), int(ser[1]), str(ser[2]), str(ser[3]), int(ser[4]), str(ser[5])))
+                cur.execute('INSERT INTO serverconfig ("server_id", "channel_id", "preset", "ip", "port", "password") VALUES ('+ str(ser[0]) + ', ' + str(ser[1]) + ', N\'' + str(ser[2]) + '\', N\'' + str(ser[3]) + '\', ' + str(ser[4]) + ', N\'' + str(ser[5]) + '\');')
                 conn.commit()
         await ctx.author.send("Setup Complete.")
+        conn.close()
 
 
     @bot.command()
     @commands.has_permissions(administrator=True)
     async def news(ctx):
+        conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
+        cur = conn.cursor()
         if rconIp == "":
             await ctx.author.send("please run $setup before using any commmands")
             return False
         dategen = datetime.datetime.now()
         filename = str(dategen.strftime("%m")) + "_" + str(dategen.strftime("%d")) + "_" + str(dategen.strftime("%Y")) + ".txt" #text name generation using mm/dd/yyyy format
         f = open(str(filename),"w")
-        cur.execute("SELECT * FROM whitelist")
+        cur.execute('SELECT * FROM whitelist')
         #f.write("This file was made on " + str(dategen) + ". copy and paste the text below into the \"to\" section.\n\n")
         writingLines = ""
         for row in cur:
@@ -693,6 +712,7 @@ if __name__ == "__main__":
         f.write(writingLines)
         f.close()
         await ctx.author.send("This file was generated on " + str(dategen) + ". Every email should be valid, however, please notify Sporti#0001 about emails that are not valid",file = discord.File(str(filename)))
+        conn.close()
 
 
 
@@ -812,7 +832,9 @@ if __name__ == "__main__":
                         if str(confirmation[0].emoji) == '👍':
                             tempName = poll(ctx.author.id)[4]
                             #print("changing username: " + tempName)
-                            cur.execute("UPDATE whitelist SET uuid = ?, username = ? WHERE user_id = ?", (str(uuid), str(mcUser), ctx.author.id))
+                            conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
+                            cur = conn.cursor()
+                            cur.execute('UPDATE whitelist SET "uuid" = N\'' + str(uuid) + '\', "username" = N\'' + str(mcUser) + '\' WHERE "user_id" = ' + str(ctx.author.id) + ';')
                             conn.commit()
                             mcr = MCRcon(str(rconIp), str(rconPass), port = int(rconPort))
                             mcr.connect()
@@ -822,11 +844,12 @@ if __name__ == "__main__":
                             print(resp)
                             mcr.disconnect()
                             await ctx.author.send(embed = editConfirm(mcUser))
+                            conn.close()
                             return True
         #"([\w]+([\w!#$%&'\*+/=?^_`{|}~-]\.?)*[\w]@(([\w][\w-]*[\w]\.)+[A-Za-z]+|\[(\d{3}\.?){4}\]|(\d{3}\.?){4}))"
 
     async def newsletterQuery(ctx):
-        print("makes it here")
+        #print("makes it here")
         while True:
             await ctx.author.send(embed = newsPrompt)
 
@@ -881,14 +904,21 @@ if __name__ == "__main__":
                     second_set = await newsletterQuery(ctx)
                     #print("done with second set: " + str(second_set))
                     if second_set != False:
-                        cur.execute("INSERT INTO whitelist (user_id, first_name, last_name, uuid, username, email, isBanned) VALUES (?, ?, ?, ?, ?, ?, ?);" , (ctx.author.id, str(first_set[0]), str(first_set[1]), str(first_set[2]), str(first_set[3]), str(second_set), 0))
-                        conn.commit()
+                        conn = psycopg2.connect(database = pgdb, user = pgUser, password = pgPass, host = pgHost, port = pgPort)
+                        cur = conn.cursor()
+                        try:
+                            #print("------------showing insert to database---------\nuser_id:"+str(ctx.author.id)+"\nfirst_name:"+str(first_set[0])+"\nlast_name:"+str(first_set[1])+"\nuuid:"+str(first_set[2])+"\nusername:"+str(first_set[3])+"\nemail:"+str(second_set))
+                            cur.execute('INSERT INTO whitelist ("user_id", "first_name", "last_name", "uuid", "username", "email", "isBanned") VALUES ('+ str(ctx.author.id) + ', \'' + str(first_set[0]) + '\', \'' + str(first_set[1]) + '\', N\'' + str(first_set[2]) + '\', N\'' + str(first_set[3]) + '\', N\'' + str(second_set) + '\', ' + str(0) + ');')
+                            conn.commit()
+                        except Exception as e:
+                            print("DB error: \n"+str(e))
                         mcr = MCRcon(str(rconIp), str(rconPass), port = int(rconPort))
                         mcr.connect()
                         resp = mcr.command("whitelist add " + str(first_set[3]))
                         print(resp)
                         mcr.disconnect()
                         await ctx.author.send(embed = addFinish_embed)
+                        conn.close()
             else:
                 if poll(ctx.author.id)[6] == 0:
                     await edit(ctx)
